@@ -4,6 +4,7 @@ import {
   TYPE_LABEL, ENEMIES, PLACES, MEETS,
 } from './data.js';
 import * as AI from './ai.js';
+import { FX, FX_BY_TYPE, CONTACT, play as playFx, guessFx } from './fx.js';
 
 const SAVE_KEY = 'monnest_save_v1';
 const $ = s => document.querySelector(s);
@@ -57,6 +58,7 @@ const needExp = () => 20 + S.lv * 15;
 const dayNo = () => Math.max(1, Math.floor((Date.now() - S.born) / 86400000) + 1);
 function remember(text) { S.memory.push(`[${dayNo()}일째] ${text}`); S.memory = S.memory.slice(-20); }
 const monImg = () => IMG[S.stage];
+const backImg = () => IMG[`${S.stage}_back`] || monImg(); // 전투·모험에서 쓰는 뒷모습
 
 function line(key) {
   if (S.stage === 'baby') {
@@ -98,10 +100,14 @@ function anim(el, cls, ms = 500) {
   setTimeout(() => el.classList.remove(cls), ms);
 }
 
-function floatText(host, text, cls = '') {
+function floatText(host, text, cls = '', near) {
   if (!host) return;
   const f = document.createElement('div');
   f.className = `float ${cls}`; f.textContent = text;
+  if (near) { // 그 몬스터 머리 위에 띄운다
+    const r = near.getBoundingClientRect(), h = host.getBoundingClientRect();
+    f.style.left = `${r.left - h.left + r.width / 2}px`; f.style.top = `${r.top - h.top + r.height * 0.25}px`;
+  }
   host.appendChild(f); setTimeout(() => f.remove(), 1100);
 }
 
@@ -314,11 +320,12 @@ async function learnSkill(kind, idx) {
   const u = SKILL_UNLOCKS[kind];
   const sk = { type: u.type, power: u.power[idx], crit: u.crit || 0, kind };
   toast('✨ 뭔가 깨우친 것 같아…', 2000);
-  const ai = await AI.skillName(S, stats(), u.reason, `${TYPE_LABEL[sk.type]} — ${skillDesc(sk)}`);
+  const ai = await AI.skillName(S, stats(), u.reason, `${TYPE_LABEL[sk.type]} — ${skillDesc(sk)}`, FX_BY_TYPE[sk.type]);
   const used = new Set(S.skills.map(s => s.name));
   sk.name = (ai?.name || '').slice(0, 12) || FALLBACK_SKILL_NAMES[kind].find(n => !used.has(n)) || `${u.label} 기술`;
   sk.desc = ai?.desc || u.desc;
   sk.shout = ai?.shout || line('battle');
+  sk.fx = FX_BY_TYPE[sk.type].includes(ai?.fx) ? ai.fx : u.fx;
   remember(`${u.reason} 새 기술 "${sk.name}"${pp(sk.name,'을','를')} 깨우쳤다.`);
   save();
 
@@ -431,7 +438,7 @@ async function startAdventure(key) {
   screen.innerHTML = `
     <div class="scene" style="background-image:url(${IMG[place.bg]})">
       <div class="bubble" id="bubble">${esc(line('battle'))}</div>
-      <img id="mon" class="mon ${S.stage} walk" src="${monImg()}" alt="">
+      <img id="mon" class="mon back ${S.stage} walk" src="${backImg()}" alt="">
     </div>
     <div class="panel"><p class="loading">${esc(place.name)}${pp(place.name,'으로','로')} 출발하는 중…</p></div>`;
   const ai = await AI.adventure(S, st, place, adv.events.map(describe));
@@ -470,7 +477,7 @@ function renderAdv(ev, reward) {
     <div class="scene" style="background-image:url(${IMG[place.bg]})">
       <div class="step">${place.name} · ${adv.i + 1}/${adv.events.length}</div>
       <div class="bubble hidden" id="bubble"></div>
-      <img id="mon" class="mon ${S.stage} walk ${foe ? 'left' : ''}" src="${monImg()}" alt="">
+      <img id="mon" class="mon back ${S.stage} walk ${foe ? 'left' : ''}" src="${backImg()}" alt="">
       ${foe ? `<img class="foe peek" src="${IMG[ev.enemy]}" alt="">` : ''}
     </div>
     <div class="panel">
@@ -508,46 +515,70 @@ async function finishAdventure(complete, fainted = false) {
 }
 
 // ───────── 전투 ─────────
+let fxr = null, fxm = null; // 전투 이펙트 캔버스: 맨 앞 / 내 몬스터 뒤
+
 function startBattle(ev) {
   const E = ENEMIES[ev.enemy], lv = ev.lv;
   const hp = Math.round(E.hp * (1 + 0.25 * (lv - 1)));
-  B = { ev, E, lv, ehp: hp, emax: hp, eatk: E.atk * (1 + 0.15 * (lv - 1)), espd: E.spd + (lv - 1), myMul: 1, enMul: 1, busy: false };
+  B = { ev, E, lv, ehp: hp, emax: hp, eatk: E.atk * (1 + 0.15 * (lv - 1)), espd: E.spd + (lv - 1), myMul: 1, enMul: 1, busy: true };
   mode = 'battle';
   renderBattle();
-  blog(`야생 ${E.name}(Lv${lv})${pp(E.name,'이','가')} 덤벼든다!`);
+  intro();
 }
 
 function renderBattle() {
-  const st = stats();
   screen.innerHTML = `
     <div class="scene battle" style="background-image:url(${IMG[adv.place.bg]})">
-      <div class="hpbox foeHp"><b>${B.E.name}</b> Lv${B.lv}<div class="hb"><i id="ehp"></i></div></div>
-      <img id="foe" class="foe" src="${IMG[B.ev.enemy]}" alt="">
+      <div class="plat foeP"></div><div class="plat meP"></div>
+      <div class="hpbox foeHp"><div class="hpname"><b>${B.E.name}</b><span>Lv${B.lv}</span></div>
+        <div class="hbrow"><em>HP</em><div class="hb"><i id="ehp"></i></div></div></div>
+      <img id="foe" class="foe enterR" src="${IMG[B.ev.enemy]}" alt="">
       <div class="bubble hidden" id="bubble"></div>
-      <img id="mon" class="mon ${S.stage} fighter" src="${monImg()}" alt="">
-      <div class="hpbox myHp"><b>${esc(S.name)}</b> Lv${S.lv}<div class="hb"><i id="mhp"></i></div><small id="mhpn"></small></div>
+      <img id="mon" class="mon back ${S.stage} wait" src="${backImg()}" alt="">
+      <div class="hpbox myHp"><div class="hpname"><b>${esc(S.name)}</b><span>Lv${S.lv}</span></div>
+        <div class="hbrow"><em>HP</em><div class="hb"><i id="mhp"></i></div></div><small id="mhpn"></small></div>
     </div>
     <div class="panel">
-      <p class="blog" id="blog"></p>
+      <div class="tbox" id="blog"></div>
       <div class="skillbtns">${S.skills.map((s, i) => `<button data-sk="${i}" class="t-${s.type}"><b>${esc(s.name)}</b><small>${TYPE_LABEL[s.type]} · ${skillDesc(s)}</small></button>`).join('')}</div>
       <button class="sub" id="run">도망치기</button>
     </div>`;
   screen.querySelectorAll('[data-sk]').forEach(b => b.onclick = () => useSkill(+b.dataset.sk));
   $('#run').onclick = runAway;
+  fxr?.destroy(); fxm?.destroy();
+  fxm = new FX($('.scene'), 'mid');
+  fxr = new FX($('.scene'), 'top');
+  setTimeout(() => $('#foe')?.classList.remove('enterR'), 650);
   drawHp();
+}
+
+async function intro() {
+  lockBtns(true);
+  blog(`앗! 야생 ${B.E.name}${pp(B.E.name, '이', '가')} 튀어나왔다!`);
+  await sleep(1000);
+  const me = $('#mon');
+  if (!me) return;
+  me.classList.remove('wait'); anim(me, 'enterL', 600);
+  blog(`가랏, ${S.name}!`);
+  setTimeout(() => say(line('battle'), 1800), 350);
+  await sleep(900);
+  if (!B) return;
+  B.busy = false; lockBtns(false);
+  blog(`${S.name}${pp(S.name, '은', '는')} 무엇을 할까?`);
 }
 
 function drawHp() {
   const st = stats();
-  $('#ehp').style.width = `${clamp(B.ehp / B.emax, 0, 1) * 100}%`;
-  $('#mhp').style.width = `${clamp(S.hp / st.maxHp, 0, 1) * 100}%`;
-  $('#mhpn').textContent = `${Math.max(0, Math.round(S.hp))}/${st.maxHp}`;
+  const set = (el, r) => { el.style.width = `${clamp(r, 0, 1) * 100}%`; el.className = r < 0.25 ? 'low' : r < 0.5 ? 'mid' : ''; };
+  set($('#ehp'), B.ehp / B.emax);
+  set($('#mhp'), S.hp / st.maxHp);
+  $('#mhpn').textContent = `${Math.max(0, Math.round(S.hp))} / ${st.maxHp}`;
 }
 const blog = t => { const b = $('#blog'); if (b) b.textContent = t; };
 function lockBtns(on) { screen.querySelectorAll('.skillbtns button, #run').forEach(b => b.disabled = on); }
 
 async function useSkill(i) {
-  if (B.busy) return;
+  if (!B || B.busy) return;
   B.busy = true; lockBtns(true);
   const sk = S.skills[i];
   const meFirst = stats().spd > B.espd || (stats().spd === B.espd && Math.random() < 0.5);
@@ -557,83 +588,94 @@ async function useSkill(i) {
     if (S.hp <= 0) return lose();
   }
   B.busy = false; lockBtns(false);
+  blog(`${S.name}${pp(S.name, '은', '는')} 무엇을 할까?`);
 }
 
 async function myTurn(sk) {
-  const st = stats();
+  const st = stats(), me = $('#mon'), foe = $('#foe'), fxName = guessFx(sk);
+  // 입은 머리 너머(적 쪽)에 있다. 거기서 쏘고, 내 몬스터 뒤 캔버스에 그려서 머리 뒤에서 나오게 한다
+  const head = fxm.pos(me, 0.16), from = { ...head, x: head.x + head.w * 0.14 };
+  const to = fxm.pos(foe, 0.55), self = fxr.pos(me, 0.5);
   say(sk.shout, 1600);
   blog(`${S.name}의 ${sk.name}!`);
-  if (sk.type === 'heal') {
-    const h = Math.round(st.maxHp * sk.power / 100);
-    S.hp = clamp(S.hp + h, 0, st.maxHp);
-    anim($('#mon'), 'flash', 700); floatText($('.scene'), `+${h}`, 'heal me');
-  } else if (sk.type === 'buff') {
-    B.myMul = Math.min(1.5, B.myMul + 0.25);
-    anim($('#mon'), 'jump', 600); floatText($('.scene'), '공격력↑', 'buff me');
+  if (sk.type === 'heal' || sk.type === 'buff') {
+    anim(me, 'jump', 600);
+    await playFx(fxr, fxName, self, to);
+    if (sk.type === 'heal') {
+      const h = Math.round(st.maxHp * sk.power / 100);
+      S.hp = clamp(S.hp + h, 0, st.maxHp);
+      floatText($('.scene'), `+${h}`, 'heal', me);
+    } else {
+      B.myMul = Math.min(1.5, B.myMul + 0.25);
+      floatText($('.scene'), '공격력↑', 'buff', me);
+    }
   } else {
-    anim($('#mon'), 'lunge', 500);
-    await sleep(220);
+    anim(me, CONTACT.has(fxName) ? 'lungeUp' : 'cast', 500);
+    await playFx(fxm, fxName, from, to);
     const crit = Math.random() < 0.05 + S.love / 400 + (sk.crit || 0);
     const dmg = Math.max(1, Math.round(sk.power * st.atk * B.myMul / 10 * rnd(0.85, 1.15) * (crit ? 1.5 : 1)));
     B.ehp -= dmg;
-    anim($('#foe'), 'hit', 500);
-    floatText($('.scene'), crit ? `치명타! -${dmg}` : `-${dmg}`, 'dmg foe');
-    if (sk.type === 'debuff') { B.enMul = Math.max(0.6, B.enMul - 0.2); setTimeout(() => floatText($('.scene'), '공격력↓', 'buff foe'), 300); }
+    anim(foe, 'hit', 500);
+    floatText($('.scene'), crit ? `급소! -${dmg}` : `-${dmg}`, crit ? 'dmg crit' : 'dmg', foe);
+    if (sk.type === 'debuff') { B.enMul = Math.max(0.6, B.enMul - 0.2); setTimeout(() => floatText($('.scene'), '공격력↓', 'buff', foe), 350); }
   }
   drawHp();
-  await sleep(850);
+  await sleep(800);
 }
 
 async function foeTurn() {
-  const s = pick(B.E.skills);
-  blog(`${B.E.name}의 ${s.name}!`);
-  anim($('#foe'), 'lungeL', 500);
-  await sleep(220);
+  const s = pick(B.E.skills), me = $('#mon'), foe = $('#foe'), fxName = s.fx || 'tackle';
+  const from = fxr.pos(foe, 0.5), to = fxr.pos(me, 0.4);
+  blog(`야생 ${B.E.name}의 ${s.name}!`);
+  anim(foe, CONTACT.has(fxName) ? 'lungeDown' : 'cast2', 500);
+  await playFx(fxr, fxName, from, to);
   const dmg = Math.max(1, Math.round(s.power * B.eatk * B.enMul / 10 * rnd(0.85, 1.15)));
   S.hp -= dmg;
-  anim($('#mon'), 'hit', 500);
-  floatText($('.scene'), `-${dmg}`, 'dmg me');
+  anim(me, 'hit', 500);
+  floatText($('.scene'), `-${dmg}`, 'dmg', me);
   drawHp();
-  await sleep(850);
+  await sleep(800);
 }
+
+function endBattle() { fxr?.destroy(); fxm?.destroy(); fxr = fxm = null; B = null; }
 
 async function win() {
   const exp = 8 + B.lv * 6, gold = ri(5, 10) + B.lv * 3, stone = Math.random() < 0.4 ? 1 : 0;
   S.gold += gold; S.stone += stone; S.counts.win++;
   S.hp = clamp(S.hp + stats().maxHp * 0.15, 0, stats().maxHp); // 이기면 숨 고르기
   adv.wins++;
-  adv.log.push(`야생 ${B.E.name}(Lv${B.lv})${pp(B.E.name,'과','와')} 싸워서 이겼다.`);
-  $('#foe').classList.add('gone');
-  blog(`${B.E.name}${pp(B.E.name,'을','를')} 물리쳤다!`);
+  adv.log.push(`야생 ${B.E.name}(Lv${B.lv})${pp(B.E.name, '과', '와')} 싸워서 이겼다.`);
+  $('#foe').classList.add('faint');
+  blog(`야생 ${B.E.name}${pp(B.E.name, '은', '는')} 쓰러졌다!`);
   say(line('win'), 2500);
-  await sleep(900);
+  await sleep(1100);
   const ups = gainExp(exp);
   save();
   showModal(`<h2>승리!</h2><p>경험치 +${exp} · 💰 ${gold}${stone ? ' · 💎 강화석 1' : ''}</p>${ups}
     <button class="main" data-close>계속 ▶</button>`, m => {
     m.querySelector('.card').dataset.lock = '1';
-    m.querySelector('[data-close]').onclick = () => { closeModal(); B = null; checkUnlock('win'); nextEvent(); };
+    m.querySelector('[data-close]').onclick = () => { closeModal(); endBattle(); checkUnlock('win'); nextEvent(); };
   });
 }
 
 function lose() {
   S.hp = 1;
   adv.log.push(`야생 ${B.E.name}에게 졌다.`);
-  blog(`${S.name}${pp(S.name,'이','가')} 쓰러졌다…`);
-  $('#mon').classList.add('down');
+  blog(`${S.name}${pp(S.name, '은', '는')} 쓰러졌다…`);
+  $('#mon').classList.add('faint');
   say(line('lose'), 3000);
   save();
-  setTimeout(() => showModal(`<h2>쓰러졌다…</h2><p>${esc(S.name)}${pp(S.name,'을','를')} 안고 둥지로 돌아간다.</p>
+  setTimeout(() => showModal(`<h2>쓰러졌다…</h2><p>${esc(S.name)}${pp(S.name, '을', '를')} 안고 둥지로 돌아간다.</p>
     <button class="main" data-close>둥지로</button>`, m => {
     m.querySelector('.card').dataset.lock = '1';
-    m.querySelector('[data-close]').onclick = () => { closeModal(); B = null; finishAdventure(false, true); };
-  }), 1200);
+    m.querySelector('[data-close]').onclick = () => { closeModal(); endBattle(); finishAdventure(false, true); };
+  }), 1300);
 }
 
 function runAway() {
-  if (B.busy) return;
-  adv.log.push(`야생 ${B.E.name}${pp(B.E.name,'을','를')} 피해 도망쳤다.`);
-  B = null;
+  if (!B || B.busy) return;
+  adv.log.push(`야생 ${B.E.name}${pp(B.E.name, '을', '를')} 피해 도망쳤다.`);
+  endBattle();
   toast('후다닥 도망쳤다!');
   nextEvent();
 }

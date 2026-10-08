@@ -4,8 +4,9 @@ export const SPECIES = '불꽃용';
 
 export const IMG = {
   egg: 'img/egg.webp', baby: 'img/baby.webp', adult: 'img/adult.webp',
+  baby_back: 'img/baby_back.webp', adult_back: 'img/adult_back.webp',
   mush: 'img/mush.webp', slime: 'img/slime.webp', bat: 'img/bat.webp', golem: 'img/golem.webp',
-  bg_nest: 'img/bg_nest.webp', bg_forest: 'img/bg_forest.webp', bg_cave: 'img/bg_cave.webp',
+  bg_nest: 'img/bg_home.webp', bg_forest: 'img/bg_forest.webp', bg_cave: 'img/bg_cave.webp',
 };
 
 export const NAMES = ['불꽃이', '콩이', '용용이', '화롱이', '뽀삐', '꾸앙이'];
@@ -119,24 +120,24 @@ export const PERSONALITIES = {
 };
 
 export const START_SKILLS = [
-  { name: '몸통 박치기', type: 'attack', power: 10, desc: '온몸으로 들이받는다.', shout: '에잇!' },
-  { name: '불씨 뱉기', type: 'attack', power: 13, desc: '작은 불씨를 퉤 뱉는다.', shout: '퉷!' },
+  { name: '몸통 박치기', type: 'attack', power: 10, desc: '온몸으로 들이받는다.', shout: '에잇!', fx: 'tackle' },
+  { name: '불씨 뱉기', type: 'attack', power: 13, desc: '작은 불씨를 퉤 뱉는다.', shout: '퉷!', fx: 'ember' },
 ];
 
 // 기술은 키운 방식대로 생긴다. 횟수가 at에 닿으면 그 칸의 기술을 하나 배운다.
 export const SKILL_UNLOCKS = {
   play: { label: '놀기', icon: '🎾', at: [5, 15, 30], type: 'debuff', power: [7, 10, 14],
-    reason: '주인이랑 많이 놀아서', desc: '장난을 쳐서 상대 공격력을 낮춘다.' },
+    fx: 'tickle', reason: '주인이랑 많이 놀아서', desc: '장난을 쳐서 상대 공격력을 낮춘다.' },
   adv: { label: '모험', icon: '🗺️', at: [2, 6, 12], type: 'attack', power: [16, 21, 27],
-    reason: '모험을 많이 다녀서', desc: '거칠게 몰아붙이는 강한 공격.' },
+    fx: 'rock', reason: '모험을 많이 다녀서', desc: '거칠게 몰아붙이는 강한 공격.' },
   win: { label: '승리', icon: '⚔️', at: [3, 10, 25], type: 'attack', power: [14, 18, 23], crit: 0.2,
-    reason: '싸움에서 여러 번 이겨서', desc: '급소를 노리는 공격. 치명타가 잘 터진다.' },
+    fx: 'bite', reason: '싸움에서 여러 번 이겨서', desc: '급소를 노리는 공격. 치명타가 잘 터진다.' },
   chat: { label: '말 걸기', icon: '💬', at: [5, 20, 40], type: 'buff', power: [0, 0, 0],
-    reason: '주인이랑 이야기를 많이 해서', desc: '기운을 끌어올려 공격력을 높인다.' },
+    fx: 'aura', reason: '주인이랑 이야기를 많이 해서', desc: '기운을 끌어올려 공격력을 높인다.' },
   eat: { label: '밥', icon: '🍖', at: [5, 20], type: 'heal', power: [35, 50],
-    reason: '밥을 잘 먹어서', desc: '체력을 회복한다.' },
+    fx: 'heal', reason: '밥을 잘 먹어서', desc: '체력을 회복한다.' },
   evolve: { label: '진화', icon: '✨', at: [], type: 'attack', power: [30],
-    reason: '다 자란 용으로 진화해서', desc: '진화한 용의 필살기.' },
+    fx: 'flamethrower', reason: '다 자란 용으로 진화해서', desc: '진화한 용의 필살기.' },
 };
 
 export const FALLBACK_SKILL_NAMES = {
@@ -151,10 +152,10 @@ export const FALLBACK_SKILL_NAMES = {
 export const TYPE_LABEL = { attack: '공격', heal: '회복', buff: '힘↑', debuff: '약화' };
 
 export const ENEMIES = {
-  mush: { name: '독버섯', hp: 22, atk: 6, spd: 4, skills: [{ name: '포자 뿜기', power: 9 }, { name: '몸통 박기', power: 11 }] },
-  slime: { name: '잎새 슬라임', hp: 26, atk: 5, spd: 7, skills: [{ name: '끈적 몸통', power: 10 }, { name: '잎날 던지기', power: 12 }] },
-  bat: { name: '동굴 박쥐', hp: 30, atk: 8, spd: 12, skills: [{ name: '초음파', power: 11 }, { name: '송곳니', power: 14 }] },
-  golem: { name: '돌 골렘', hp: 45, atk: 10, spd: 3, skills: [{ name: '돌주먹', power: 14 }, { name: '바위 굴리기', power: 17 }] },
+  mush: { name: '독버섯', hp: 22, atk: 6, spd: 4, skills: [{ name: '포자 뿜기', power: 9, fx: 'spore' }, { name: '몸통 박기', power: 11, fx: 'tackle' }] },
+  slime: { name: '잎새 슬라임', hp: 26, atk: 5, spd: 7, skills: [{ name: '끈적 몸통', power: 10, fx: 'slime' }, { name: '잎날 던지기', power: 12, fx: 'leaf' }] },
+  bat: { name: '동굴 박쥐', hp: 30, atk: 8, spd: 12, skills: [{ name: '초음파', power: 11, fx: 'sonic' }, { name: '송곳니', power: 14, fx: 'bite' }] },
+  golem: { name: '돌 골렘', hp: 45, atk: 10, spd: 3, skills: [{ name: '돌주먹', power: 14, fx: 'punch' }, { name: '바위 굴리기', power: 17, fx: 'rock' }] },
 };
 
 export const PLACES = {

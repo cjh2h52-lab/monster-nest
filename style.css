@@ -27,10 +27,10 @@ button, input, select { font-family: inherit; font-size: inherit; }
 /* 장면 */
 .scene { flex: 1; position: relative; overflow: hidden; min-height: 0; background-size: cover; background-position: center 70%; }
 .mon, .foe { position: absolute; display: block; filter: drop-shadow(0 6px 6px #0006); transform-origin: 50% 100%; user-select: none; -webkit-user-drag: none; }
-.mon { left: 0; right: 0; margin: 0 auto; bottom: 7%; width: min(58%, 250px); cursor: pointer; }
-.mon.egg { width: min(50%, 220px); }
-.mon.adult { width: min(66%, 290px); }
-.mon.left { right: 38%; width: min(46%, 200px); }
+.mon { left: 0; right: 0; margin: 0 auto; bottom: 7%; width: auto; height: 30%; max-width: 70%; object-fit: contain; cursor: pointer; }
+.mon.egg { height: 28%; }
+.mon.adult { height: 48%; max-width: 90%; }
+.mon.left { right: 38%; }
 .foe.peek { right: 3%; bottom: 9%; width: min(36%, 160px); animation: peek 1.6s ease-in-out infinite; }
 
 .step { position: absolute; top: 8px; left: 8px; background: #0008; padding: 3px 10px; border-radius: 10px; font-size: 14px; }
@@ -65,19 +65,40 @@ button.sub { background: transparent !important; color: inherit; box-shadow: non
 .loading { text-align: center; padding: 26px 0; font-size: 18px; animation: blink 1s infinite; }
 
 /* 전투 */
-.scene.battle .foe { right: 5%; top: 17%; width: min(40%, 180px); }
-.scene.battle .mon { left: 4%; right: auto; margin: 0; bottom: 4%; width: min(48%, 210px); }
-.scene.battle .mon.adult { width: min(56%, 240px); }
-.scene.battle .bubble { left: 6%; transform: none; top: auto; bottom: 46%; max-width: 60%; }
+.fxcv { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 6; }
+.fxcv.mid { z-index: 3; }
+.scene.battle { background-position: center 60%; }
+.scene.battle::after { content: ''; position: absolute; inset: 0; background: linear-gradient(#0000 55%, #0004); pointer-events: none; }
+.plat { position: absolute; border-radius: 50%; background: radial-gradient(ellipse at 50% 45%, #ffffff30 0%, #0000004d 45%, #0000 70%); }
+.plat.foeP { right: 2%; bottom: 46%; width: 48%; height: 9%; }
+.plat.meP { left: -6%; bottom: 0; width: 66%; height: 12%; }
+.scene.battle .foe { right: 9%; bottom: 49%; width: auto; height: 26%; max-width: 46%; z-index: 2; animation: idleF 2.4s ease-in-out infinite; }
+.scene.battle .mon { left: 3%; right: auto; margin: 0; bottom: 3%; width: auto; height: 36%; max-width: 70%; z-index: 4; animation: idleB 2.2s ease-in-out infinite; }
+.scene.battle .mon.adult { height: 50%; max-width: 78%; }
+.scene.battle .bubble { left: 6%; transform: none; top: auto; bottom: 50%; max-width: 58%; }
 .scene.battle .bubble::after { left: 30%; }
-.hpbox { position: absolute; background: #000a; border-radius: 12px; padding: 6px 10px; font-size: 14px; min-width: 130px; z-index: 4; }
-.hpbox b { font-weight: normal; font-size: 16px; }
-.hpbox small { display: block; text-align: right; font-size: 12px; opacity: .85; }
+.mon.back { cursor: default; }
+.mon.back.walk { height: 28%; bottom: 5%; }
+.mon.back.adult.walk { height: 44%; }
+.mon.back.left { right: 40%; }
+
+.hpbox { position: absolute; z-index: 7; background: linear-gradient(#fffaf0, #f1e2c6); color: var(--ink); border: 3px solid #4a3220;
+  border-radius: 12px 4px 12px 4px; padding: 6px 10px 7px; min-width: 150px; box-shadow: 0 3px 0 #0005; }
+.hpname { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.hpname b { font-weight: normal; font-size: 17px; }
+.hpname span { font-size: 14px; color: #7a5a3a; }
+.hbrow { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
+.hbrow em { font-style: normal; font-size: 11px; background: #4a3220; color: #ffd27a; border-radius: 4px; padding: 0 4px; }
+.hb { flex: 1; height: 9px; background: #3b2a1c; border-radius: 5px; overflow: hidden; border: 1px solid #2a1c12; }
+.hb i { display: block; height: 100%; background: linear-gradient(#8bf07f, #4cc244); transition: width .5s ease-out; width: 100%; }
+.hb i.mid { background: linear-gradient(#ffe27a, #f2b33d); }
+.hb i.low { background: linear-gradient(#ff8a7a, #e2513c); }
+.hpbox small { display: block; text-align: right; font-size: 13px; margin-top: 2px; }
 .foeHp { top: 4%; left: 4%; }
-.myHp { right: 4%; bottom: 5%; }
-.hb { height: 8px; background: #fff3; border-radius: 4px; overflow: hidden; margin-top: 3px; }
-.hb i { display: block; height: 100%; background: var(--hp); transition: width .4s; width: 100%; }
-.blog { min-height: 24px; margin: 2px 0 8px; font-size: 17px; text-align: center; }
+.myHp { right: 4%; bottom: 6%; }
+
+.tbox { background: #fffaf0; color: var(--ink); border: 3px solid #4a3220; border-radius: 12px; padding: 10px 14px; margin: 0 0 10px;
+  min-height: 48px; font-size: 17px; line-height: 1.4; box-shadow: inset 0 0 0 3px #e9d8b8; }
 .skillbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
 .skillbtns button { border: 0; border-radius: 12px; padding: 9px 6px; color: var(--ink); background: var(--cream); box-shadow: 0 4px 0 #b9a27f; cursor: pointer; }
 .skillbtns button b { display: block; font-weight: normal; font-size: 17px; }
@@ -89,13 +110,37 @@ button.sub { background: transparent !important; color: inherit; box-shadow: non
 .skillbtns button:disabled, #run:disabled { opacity: .5; }
 #run { width: 100%; }
 
+/* 전투 움직임 */
+.scene.battle .wait { opacity: 0; animation: none; }
+.scene.battle .enterR { animation: enterR .6s ease-out; }
+.scene.battle .enterL { animation: enterL .6s ease-out; }
+.scene.battle .lungeUp { animation: lungeUp .45s ease-out; }
+.scene.battle .lungeDown { animation: lungeDown .45s ease-out; }
+.scene.battle .cast { animation: cast .4s ease-out; }
+.scene.battle .cast2 { animation: cast2 .4s ease-out; }
+.scene.battle .hit { animation: hit .5s ease-out; }
+.scene.battle .jump { animation: jump .6s ease-out; }
+.scene.battle .faint { animation: faint .9s ease-in forwards; }
+.shake { animation: shake .3s linear; }
+.shakeBig { animation: shakeBig .45s linear; }
+@keyframes idleF { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-3%) scale(1.01,.99); } }
+@keyframes idleB { 0%,100% { transform: scale(1); } 50% { transform: scale(1.02,.97); } }
+@keyframes enterR { from { transform: translateX(120%); opacity: 0; } }
+@keyframes enterL { from { transform: translateX(-120%); opacity: 0; } }
+@keyframes lungeUp { 0%,100% { transform: translate(0,0); } 40% { transform: translate(38%,-30%) scale(.92); } }
+@keyframes lungeDown { 0%,100% { transform: translate(0,0); } 40% { transform: translate(-45%,40%) scale(1.1); } }
+@keyframes cast { 0%,100% { transform: translate(0,0); } 30% { transform: translate(-5%,4%) scale(1.04,.95); } 55% { transform: translate(4%,-3%); } }
+@keyframes cast2 { 0%,100% { transform: translate(0,0); } 30% { transform: translate(5%,-4%) scale(1.04,.95); } 55% { transform: translate(-4%,3%); } }
+@keyframes faint { to { transform: translateY(40%) scale(.9); opacity: 0; filter: brightness(.5); } }
+@keyframes shake { 25% { transform: translate(-6px, 3px); } 50% { transform: translate(5px, -3px); } 75% { transform: translate(-3px, 2px); } }
+@keyframes shakeBig { 15% { transform: translate(-12px, 6px); } 35% { transform: translate(10px, -7px); } 55% { transform: translate(-8px, 5px); } 75% { transform: translate(5px, -3px); } }
+
 /* 떠오르는 글자 */
 .float { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); font-size: 26px; z-index: 6; pointer-events: none;
   color: #fff; text-shadow: 0 2px 0 #000, 0 0 6px #000; animation: floatUp 1.1s ease-out forwards; white-space: nowrap; }
 .float.big { font-size: 40px; color: #ffd27a; }
-.float.foe { left: 72%; top: 22%; }
-.float.me { left: 26%; top: 52%; }
-.float.dmg { color: #ffdddd; }
+.float.dmg { color: #fff; font-size: 30px; }
+.float.crit { color: #ffd23d; font-size: 34px; }
 .float.heal { color: #b8ffb0; }
 .float.buff { color: #ffd27a; font-size: 20px; }
 
@@ -106,11 +151,7 @@ button.sub { background: transparent !important; color: inherit; box-shadow: non
 .jump { animation: jump .6s ease-out; }
 .munch { animation: munch .7s ease-in-out; }
 .flash { animation: flash .9s ease-out; }
-.lunge { animation: lunge .5s ease-out; }
-.lungeL { animation: lungeL .5s ease-out; }
 .hit { animation: hit .5s ease-out; }
-.gone { animation: gone .8s ease-in forwards; }
-.down { transform: rotate(-12deg) translateY(8%); filter: grayscale(.8) brightness(.8); transition: all .6s; }
 
 @keyframes bob { 0%,100% { transform: scale(1,1); } 50% { transform: scale(1.03,.96); } }
 @keyframes walk { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-4%) rotate(2deg); } }
@@ -118,10 +159,7 @@ button.sub { background: transparent !important; color: inherit; box-shadow: non
 @keyframes jump { 0%,100% { transform: translateY(0) scale(1); } 15% { transform: translateY(0) scale(1.08,.9); } 45% { transform: translateY(-22%) scale(.95,1.06); } }
 @keyframes munch { 0%,40%,80% { transform: scale(1); } 20%,60% { transform: scale(1.06,.93); } }
 @keyframes flash { 0% { filter: brightness(3) drop-shadow(0 0 30px #fff); } 100% { filter: brightness(1) drop-shadow(0 6px 6px #0006); } }
-@keyframes lunge { 0%,100% { transform: translateX(0); } 40% { transform: translateX(45%) scale(1.05); } }
-@keyframes lungeL { 0%,100% { transform: translateX(0); } 40% { transform: translateX(-45%) scale(1.05); } }
 @keyframes hit { 0%,100% { transform: translateX(0); filter: none; } 20% { transform: translateX(-7%); filter: brightness(2) sepia(1) hue-rotate(-40deg) saturate(5); } 40% { transform: translateX(6%); } 60% { transform: translateX(-4%); } }
-@keyframes gone { to { transform: scale(.3) translateY(30%); opacity: 0; } }
 @keyframes peek { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5%); } }
 @keyframes pop { from { transform: translateX(-50%) scale(.6); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
 .scene.battle .bubble.pop { animation: popL .25s ease-out; }
@@ -181,7 +219,8 @@ button.sub { background: transparent !important; color: inherit; box-shadow: non
 .chatin button { width: auto; margin: 0; padding: 0 16px; }
 
 .evo { position: relative; height: 200px; }
-.evo img { position: absolute; left: 0; right: 0; margin: auto; height: 190px; }
+.evo img { position: absolute; left: 0; right: 0; bottom: 0; margin: 0 auto; height: 190px; }
+.evo img.from { height: 115px; }
 .evo .from { animation: evoOut 1.6s ease-in forwards; }
 .evo .to { opacity: 0; animation: evoIn 1.6s ease-out .9s forwards; }
 @keyframes evoOut { 0%,60% { opacity: 1; filter: brightness(1); } 80% { filter: brightness(5); } 100% { opacity: 0; filter: brightness(5); } }

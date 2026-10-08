@@ -164,8 +164,14 @@ ${log.map(l => `- ${l}`).join('\n')}
   });
 }
 
-// 새 기술 이름 짓기
-export async function skillName(S, stats, reason, effect) {
+const FX_WORDS = {
+  tackle: '몸으로 들이받기', ember: '불덩이 쏘기', flamethrower: '불길 뿜기', slash: '발톱으로 할퀴기', bite: '이빨로 물기',
+  rock: '바위 떨어뜨리기', punch: '아주 세게 후려치기', leaf: '잎사귀 날리기', sonic: '음파 쏘기',
+  tickle: '간지럼·장난치기', charm: '하트 날리며 애교', growl: '으르렁 겁주기', aura: '기운 끌어올리기', heal: '회복의 빛',
+};
+
+// 새 기술 이름 짓기. fx는 정해진 이펙트 중에서 이름에 맞는 걸 고른다
+export async function skillName(S, stats, reason, effect, fxChoices) {
   return call({
     system: profile(S, stats) + '\n\n이번에는 이 몬스터가 새로 깨우친 기술의 이름을 짓는다.',
     messages: [{ role: 'user', content:
@@ -173,8 +179,9 @@ export async function skillName(S, stats, reason, effect) {
 이미 아는 기술: ${S.skills.map(s => s.name).join(', ')} (겹치지 않게).
 - name: 기술 이름. 한국어 2~7글자, 귀엽고 게임스럽게. 깨우친 계기와 성격이 묻어나게.
 - desc: 기술 설명 한 문장.
-- shout: 기술을 쓸 때 몬스터가 외치는 짧은 말(위 말투 그대로, 10글자 안팎).` }],
-    schema: obj({ name: 'string', desc: 'string', shout: 'string' }),
+- shout: 기술을 쓸 때 몬스터가 외치는 짧은 말(위 말투 그대로, 10글자 안팎).
+- fx: 기술 연출. 이 중에서 이름과 어울리는 걸 골라: ${fxChoices.map(f => `${f}(${FX_WORDS[f]})`).join(', ')}` }],
+    schema: obj({ name: 'string', desc: 'string', shout: 'string', fx: { type: 'string', enum: fxChoices } }),
     maxTokens: 1500,
   });
 }
